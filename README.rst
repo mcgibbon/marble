@@ -18,10 +18,3 @@ Machine Assisted Boundary Layer Emulation is a neural network based perameteriza
 
 * Free software: BSD license
 * Documentation: https://marble.readthedocs.io.
-
-Features
---------
-
-* TODO
-
-

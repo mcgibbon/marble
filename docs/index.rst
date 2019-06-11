@@ -1,5 +1,5 @@
 Welcome to MARBLE's documentation!
-======================================
+==================================
 
 .. toctree::
    :maxdepth: 2
