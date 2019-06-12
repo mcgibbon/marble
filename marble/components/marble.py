@@ -6,9 +6,16 @@ import os
 import xarray as xr
 import numpy as np
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-weight_ds = xr.open_dataset(os.path.join(dir_path, 'data/weights-nep-mb19.nc'))
-pc_ds = xr.open_dataset(os.path.join(dir_path, 'data/era5-pc-mb19.nc'))
+data_path = os.path.join(
+    os.path.dirname(
+        os.path.dirname(
+            os.path.realpath(__file__)
+        )
+    ),
+    'data'
+)
+weight_ds = xr.open_dataset(os.path.join(data_path, 'weights-nep-mb19.nc'))
+pc_ds = xr.open_dataset(os.path.join(data_path, 'era5-pc-mb19.nc'))
 
 
 state_name_list = ast.literal_eval(weight_ds.state_name_list)
@@ -31,17 +38,13 @@ def zero_sl_rad_clr_mean(weight_ds):
             i_start += name_feature_counts.get(diagnostic_name_list[i_name], 1)
         i_end = i_start + name_feature_counts['sl_rad_clr']
         weight_ds['diagnostic_mean'][i_start:i_end] = 0.
-    else:
-        print('sl_rad_clr is not an output')
 
 zero_sl_rad_clr_mean(weight_ds)
 
 
 def concatenate_pbl_input(state):
     concat_list = []
-    print('concatenating inputs')
     for name in pbl_input_name_list:
-        print(name, state[name])
         array = state[name]
         if len(array.shape) == 2:
             concat_list.append(array)
@@ -51,9 +54,6 @@ def concatenate_pbl_input(state):
 
 
 def normalize_pbl_input(pbl_input_array):
-    print('Normalizing array', pbl_input_array)
-    print('mean', weight_ds['pbl_input_mean'].values)
-    print('scale', weight_ds['pbl_input_scale'].values)
     pbl_input_array -= weight_ds['pbl_input_mean'].values[None, :]
     pbl_input_array /= weight_ds['pbl_input_scale'].values[None, :]
 
@@ -235,23 +235,24 @@ class LatentMarble(TendencyComponent):
             'units': 'kg/m^2',
             'alias': 'ccw',
         },
+        'height': {
+            'dims': ['z_star'],
+            'units': 'm',
+            'alias': 'z',
+        }
     }
 
     def array_call(self, state):
         state['lhf'] *= 3600.  # NN expects J/m^2 integrated over an hour
         state['shf'] *= 3600.
         pbl_input_array = concatenate_pbl_input(state)
-        print('pbl_input_array', pbl_input_array)
         normalize_pbl_input(pbl_input_array)
-        # pbl_input_array[:, 33] = 0.
-        print('normalized pbl_input_array', pbl_input_array)
-        # print('pbl_input_mean', weight_ds['pbl_input_mean'].values)
         tendency_array, diagnostic_array = get_network_outputs(pbl_input_array)
         denormalize_diagnostic_output(diagnostic_array)
         diagnostic_dict = get_diagnostic_dict_from_array(diagnostic_array)
         denormalize_state(tendency_array, add_mean=False)
         tendency_dict = get_state_dict_from_array(tendency_array)
         tendency_dict['sl'] += diagnostic_dict['sl_rad_clr']
+        diagnostic_dict['z'] = np.linspace(0., 3000., 20)
         return tendency_dict, diagnostic_dict
-
 

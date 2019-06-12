@@ -5,6 +5,7 @@ from .components import InputHeightToPrincipalComponents, convert_height_to_prin
 
 height_to_pc = InputHeightToPrincipalComponents()
 
+
 def convert_dataarray_to_sympl(dict_of_dataarray):
     for name, array in dict_of_dataarray.items():
         if isinstance(array, xr.DataArray):
@@ -87,15 +88,30 @@ def get_era5_forcing(latent_filename, i_timestep, latent=True):
             )
         pc_state = {}
         pc_state.update(state)
-        pc_state['height'] = sympl.DataArray(
-            np.linspace(0, 3000., 20),
-            dims=['z_star'],
-            attrs={'units': 'm'},
-        )
         pc_state['time'] = sympl.timedelta(0)
         pc_state = height_to_pc(pc_state)
         pc_state.pop('total_water_mixing_ratio_components')
         pc_state.pop('liquid_water_static_energy_components')
-        pc_state.pop('height')
         state.update(pc_state)
+    return state
+
+
+def get_era5_diagnostics(latent_filename, i_timestep):
+    state = {}
+    ds = xr.open_dataset(latent_filename)
+    state['cloud_fraction'] = ds['cld'][0, 0, i_timestep, :]
+    state['cloud_fraction'].attrs['units'] = ''
+    state['surface_precipitation_rate'] = ds['precip'][0, 0, i_timestep]
+    state['surface_precipitation_rate'].attrs['units'] = 'mm/hr'
+    state['rain_water_mixing_ratio'] = ds['rrain'][0, 0, i_timestep, :]
+    state['rain_water_mixing_ratio'].attrs['units'] = 'kg/kg'
+    state['cloud_water_mixing_ratio'] = ds['rcld'][0, 0, i_timestep, :]
+    state['cloud_water_mixing_ratio'].attrs['units'] = 'kg/kg'
+    state['clear_sky_radiative_heating_rate'] = ds['sl_rad_clr'][0, 0, i_timestep, :]
+    state['clear_sky_radiative_heating_rate'].attrs['units'] = 'degK/hr'
+    state['low_cloud_fraction'] = ds['cldlow'][0, 0, i_timestep]
+    state['low_cloud_fraction'].attrs['units'] = ''
+    state['column_cloud_water'] = ds['ccw'][0, 0, i_timestep]
+    state['column_cloud_water'].attrs['units'] = 'kg/m^2'
+    convert_dataarray_to_sympl(state)
     return state

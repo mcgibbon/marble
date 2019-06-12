@@ -13,6 +13,7 @@ mb.register_alias_dict(
         'z': 'height',
         'sl_adv_latent': 'liquid_water_static_energy_components_horizontal_advective_tendency',
         'rt_adv_latent': 'total_water_mixing_ratio_components_horizontal_advective_tendency',
+        'cld': 'cloud_fraction',
     }
 )
 
@@ -21,58 +22,85 @@ test_era5_filename = '/home/twine/data/era5/era5-interp-2016.nc'
 state = mb.get_era5_state(test_era5_filename, latent=True)
 timestep = timedelta(hours=1)
 marble_tendency_component = mb.LatentMarble()
-components_to_height = mb.InputPrincipalComponentsToHeight()
+inputs_to_height = mb.InputPrincipalComponentsToHeight()
+diagnostics_to_height = mb.DiagnosticPrincipalComponentsToHeight()
 advection = mb.LatentHorizontalAdvectiveForcing()
 stepper = sp.AdamsBashforth([marble_tendency_component, advection], order=1)
+model_monitor = mb.ColumnStore()
+reference_monitor = mb.ColumnStore()
 
 data_lists = {}
 reference_data_lists = {}
 
-i_hour = 0
 while state['time'] < timedelta(days=3):
     i_hour = int(state['time'].total_seconds() / 3600.)
     state.update(mb.get_era5_forcing(test_era5_filename, latent=True, i_timestep=i_hour))
-    z_dict = components_to_height(state)
-    reference_z_dict = mb.get_era5_state(test_era5_filename, latent=False, i_timestep=i_hour)
-    for name in ('liquid_water_static_energy', 'total_water_mixing_ratio'):
-        if isinstance(z_dict[name], sp.DataArray):
-            data_lists[name] = data_lists.get(name, [])
-            data_lists[name].append(z_dict[name].values[None, :])
-            reference_data_lists[name] = reference_data_lists.get(name, [])
-            reference_data_lists[name].append(reference_z_dict[name].values[None, :])
     diagnostics, next_state = stepper(state, timestep=timestep)
+    state.update(diagnostics)
+    # Convert to height coordinates and store in monitors for later analysis
+    z_dict = inputs_to_height(state)
+    z_dict.update(diagnostics_to_height(state))
+    model_monitor.store(z_dict)
+    reference_z_dict = mb.get_era5_state(test_era5_filename, latent=False, i_timestep=i_hour)
+    reference_z_dict.update(mb.get_era5_diagnostics(test_era5_filename, i_timestep=i_hour))
+    reference_monitor.store(reference_z_dict)
+    # Increment state and timestep
     state.update(next_state)
     state['time'] += timestep
 
-timeseries_dict = {}
-reference_dict = {}
-for name, list in data_lists.items():
-    timeseries_dict[name] = np.concatenate(list, axis=0)
-    reference_dict[name] = np.concatenate(reference_data_lists[name], axis=0)
 
-state.update(components_to_height(state))
+# Integration is over, here analysis code starts
 
-state = mb.AliasDict(state)
-timeseries_dict = mb.AliasDict(timeseries_dict)
-reference_dict = mb.AliasDict(reference_dict)
+def get_min_max(array1, array2):
+    """
+    Returns the minimum and maximum values from a pair of numpy arrays.
+    """
+    vmin = min(np.min(array1), np.min(array2))
+    vmax = max(np.max(array1), np.max(array2))
+    return vmin, vmax
 
-plt.figure()
-plt.pcolormesh(timeseries_dict['sl'].T)
-plt.figure()
-plt.pcolormesh(reference_dict['sl'].T)
-plt.show()
 
 Cpd = sp.get_constant('heat_capacity_of_dry_air_at_constant_pressure', units='J/kg/degK')
 
-reference = mb.get_era5_state(test_era5_filename, latent=False, i_timestep=i_hour)
-reference = mb.AliasDict(reference)
+time = np.arange(0, model_monitor['sl'].shape[0]) / 24.
+z = state['height'].values / 1000.
+T, Z = np.broadcast_arrays(time[:, None], z[None, :])
 
-fig, ax = plt.subplots(1, 2)
-ax[0].plot(state['sl'].values / Cpd, state['z'].values, label='MARBLE')
-ax[0].plot(reference['sl'].values / Cpd, state['z'].values, label='ERA5')
-ax[1].plot(state['rt'].values, state['z'].values)
-ax[1].plot(reference['rt'].values, state['z'].values)
-ax[0].legend(loc='best')
-# plt.show()
+marble_sl = model_monitor['sl'] / Cpd
+reference_sl = reference_monitor['sl'] / Cpd
+vmin, vmax = get_min_max(marble_sl, reference_sl)
 
+
+fig, ax = plt.subplots(3, 2, figsize=(8, 6))
+
+im = ax[0, 0].pcolormesh(T, Z, marble_sl, vmin=vmin, vmax=vmax)
+plt.colorbar(im, ax=ax[0, 0])
+ax[0, 0].set_title('MARBLE $s_l$ (K)')
+
+im = ax[0, 1].pcolormesh(T, Z, reference_sl, vmin=vmin, vmax=vmax)
+plt.colorbar(im, ax=ax[0, 1])
+ax[0, 1].set_title('ERA5 $s_l$ (K)')
+
+vmin, vmax = get_min_max(model_monitor['rt'], reference_monitor['rt'])
+vmin *= 1e3
+vmax *= 1e3
+im = ax[1, 0].pcolormesh(T, Z, 1e3 * model_monitor['rt'], vmin=vmin, vmax=vmax)
+plt.colorbar(im, ax=ax[1, 0])
+ax[1, 0].set_title('MARBLE $r_t$ (g/kg)')
+
+im = ax[1, 1].pcolormesh(T, Z, 1e3 * reference_monitor['rt'], vmin=vmin, vmax=vmax)
+plt.colorbar(im, ax=ax[1, 1])
+ax[1, 1].set_title('ERA5 $r_t$ (g/kg)')
+
+im = ax[2, 0].pcolormesh(T, Z, model_monitor['cld'], vmin=0., vmax=1.)
+plt.colorbar(im, ax=ax[2, 0])
+ax[2, 0].set_title('MARBLE cloud fraction')
+im = ax[2, 1].pcolormesh(T, Z, reference_monitor['cld'], vmin=0., vmax=1.)
+plt.colorbar(im, ax=ax[2, 1])
+ax[2, 1].set_title('ERA5 cloud fraction')
+
+ax[-1, 0].set_xlabel('Time elapsed (days)')
+ax[-1, 1].set_xlabel('Time elapsed (days)')
+
+plt.tight_layout()
 plt.show()

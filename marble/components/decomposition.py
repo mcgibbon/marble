@@ -21,11 +21,6 @@ class InputHeightToPrincipalComponents(DiagnosticComponent):
             'units': 'm/s',
             'alias': 'w'
         },
-        'height': {
-            'dims': ['*', 'z_star'],
-            'units': 'm',
-            'alias': 'z',
-        },
     }
 
     diagnostic_properties = {
@@ -44,18 +39,12 @@ class InputHeightToPrincipalComponents(DiagnosticComponent):
             'units': '',
             'alias': 'w_latent'
         },
-        'height': {
-            'dims': ['*', 'z_star'],
-            'units': 'm',
-            'alias': 'z',
-        },
     }
 
     def array_call(self, state):
         diagnostic_dict = {}
         for name in 'w', 'sl', 'rt':
             diagnostic_dict[f'{name}_latent'] = convert_height_to_principal_components(state[name], name, subtract_mean=True)
-        diagnostic_dict['z'] = state['z']
         return diagnostic_dict
 
 
@@ -96,11 +85,6 @@ class InputPrincipalComponentsToHeight(DiagnosticComponent):
             'units': '',
             'alias': 'w'
         },
-        'height': {
-            'dims': ['*', 'z_star'],
-            'units': 'm',
-            'alias': 'z',
-        },
     }
 
     diagnostic_properties = {
@@ -119,11 +103,6 @@ class InputPrincipalComponentsToHeight(DiagnosticComponent):
             'units': 'm/s',
             'alias': 'w'
         },
-        'height': {
-            'dims': ['*', 'z_star'],
-            'units': 'm',
-            'alias': 'z',
-        },
     }
 
     def array_call(self, state):
@@ -132,7 +111,6 @@ class InputPrincipalComponentsToHeight(DiagnosticComponent):
             diagnostic_dict[name] = convert_principal_components_to_height(
                 state[name], basis_name=name, add_mean=True
             )
-        diagnostic_dict['z'] = state['z']
         return diagnostic_dict
 
 
@@ -156,13 +134,8 @@ class DiagnosticPrincipalComponentsToHeight(DiagnosticComponent):
         },
         'clear_sky_radiative_heating_rate_components': {
             'dims': ['*', 'sl_latent'],
-            'units': 'degK hr^-1',
+            'units': 'hr^-1',
             'alias': 'sl_rad_clr',
-        },
-        'height': {
-            'dims': ['*', 'z_star'],
-            'units': 'm',
-            'alias': 'z',
         },
     }
 
@@ -187,11 +160,6 @@ class DiagnosticPrincipalComponentsToHeight(DiagnosticComponent):
             'units': 'degK hr^-1',
             'alias': 'sl_rad_clr',
         },
-        'height': {
-            'dims': ['*', 'z_star'],
-            'units': 'm',
-            'alias': 'z',
-        },
     }
 
     def array_call(self, state):
@@ -203,5 +171,4 @@ class DiagnosticPrincipalComponentsToHeight(DiagnosticComponent):
         diagnostic_dict['sl_rad_clr'] = convert_principal_components_to_height(
             state['sl_rad_clr'], basis_name='sl', add_mean=False
         )
-        diagnostic_dict['z'] = state['z']
         return diagnostic_dict
