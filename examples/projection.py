@@ -5,7 +5,6 @@ profiles.
 """
 import marble as mb
 import sympl as sp
-from datetime import timedelta
 import matplotlib.pyplot as plt
 
 mb.register_alias_dict(
