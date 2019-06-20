@@ -1,4 +1,5 @@
 import marble as mb
+import initialization as init
 import sympl as sp
 from datetime import timedelta
 import matplotlib.pyplot as plt
@@ -17,32 +18,30 @@ mb.register_alias_dict(
     }
 )
 
-test_era5_filename = '/home/twine/data/era5/era5-interp-2016.nc'
-
-state = mb.get_era5_state(test_era5_filename, latent=True)
+# Initialize components
 timestep = timedelta(hours=1)
 marble_tendency_component = mb.LatentMarble()
 inputs_to_height = mb.InputPrincipalComponentsToHeight()
 diagnostics_to_height = mb.DiagnosticPrincipalComponentsToHeight()
 advection = mb.LatentHorizontalAdvectiveForcing()
+# First order Adams Bashforth is the same as Forward Euler
 stepper = sp.AdamsBashforth([marble_tendency_component, advection], order=1)
 model_monitor = mb.ColumnStore()
 reference_monitor = mb.ColumnStore()
 
-data_lists = {}
-reference_data_lists = {}
+state = init.get_era5_state(init.column_filename, latent=True)
 
-while state['time'] < timedelta(days=3):
+while state['time'] < timedelta(days=30):
     i_hour = int(state['time'].total_seconds() / 3600.)
-    state.update(mb.get_era5_forcing(test_era5_filename, latent=True, i_timestep=i_hour))
+    state.update(init.get_era5_forcing(init.column_filename, latent=True, i_timestep=i_hour))
     diagnostics, next_state = stepper(state, timestep=timestep)
     state.update(diagnostics)
     # Convert to height coordinates and store in monitors for later analysis
     z_dict = inputs_to_height(state)
     z_dict.update(diagnostics_to_height(state))
     model_monitor.store(z_dict)
-    reference_z_dict = mb.get_era5_state(test_era5_filename, latent=False, i_timestep=i_hour)
-    reference_z_dict.update(mb.get_era5_diagnostics(test_era5_filename, i_timestep=i_hour))
+    reference_z_dict = init.get_era5_state(init.column_filename, latent=False, i_timestep=i_hour)
+    reference_z_dict.update(init.get_era5_diagnostics(init.column_filename, i_timestep=i_hour))
     reference_monitor.store(reference_z_dict)
     # Increment state and timestep
     state.update(next_state)

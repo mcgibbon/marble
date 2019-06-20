@@ -243,8 +243,8 @@ class LatentMarble(TendencyComponent):
     }
 
     def array_call(self, state):
-        state['lhf'] *= 3600.  # NN expects J/m^2 integrated over an hour
-        state['shf'] *= 3600.
+        state['lhf'] = state['lhf'] * 3600.  # NN expects J/m^2 integrated over an hour
+        state['shf'] = state['shf'] * 3600.
         pbl_input_array = concatenate_pbl_input(state)
         normalize_pbl_input(pbl_input_array)
         tendency_array, diagnostic_array = get_network_outputs(pbl_input_array)

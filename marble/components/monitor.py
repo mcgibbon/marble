@@ -31,8 +31,8 @@ class ColumnStore(sp.Monitor):
                 pass
             elif len(array.shape) > 1:
                 raise NotAColumnException(
-                    'array for {} is not a column, has shape {}'.format(
-                        name, array.shape)
+                    'array for {} is not a column, has shape {}, dims {}'.format(
+                        name, array.shape, array.dims)
                 )
             elif len(array.shape) == 1:
                 self._column_lists[name] = self._column_lists.get(name, [])

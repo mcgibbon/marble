@@ -50,7 +50,7 @@ class InputHeightToPrincipalComponents(DiagnosticComponent):
 
 def convert_height_to_principal_components(array, basis_name, subtract_mean=True):
     if subtract_mean:
-        array = array - pc_ds[f'{basis_name}_mean'].values[None, :]
+        array = array - pc_ds[f'{basis_name}_mean'].values
     return np.dot(
         array,
         pc_ds[f'{basis_name}_principal_components'].values[:name_feature_counts[basis_name], :].T
@@ -63,7 +63,7 @@ def convert_principal_components_to_height(array, basis_name, add_mean=True):
         pc_ds[f'{basis_name}_principal_components'].values[:name_feature_counts[basis_name], :]
     )
     if add_mean:
-        result += pc_ds[f'{basis_name}_mean'].values[None, :]
+        result += pc_ds[f'{basis_name}_mean'].values
     return result
 
 
