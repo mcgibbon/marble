@@ -14,7 +14,9 @@ MARBLE
         :alt: Documentation Status
 
 
-Machine Assisted Boundary Layer Emulation is a neural network based perameterization for weather and climate models, using the Sympl framework. It requires Python 3.
+Machine Assisted Boundary Layer Emulation is a neural network based
+parameterization for weather and climate models, using the Sympl framework.
+It requires Python 3.
 
 * Free software: BSD license
 * Documentation: https://marble.readthedocs.io.
