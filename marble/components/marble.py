@@ -5,6 +5,10 @@ import ast
 import os
 import xarray as xr
 import numpy as np
+from marble.docstrings import document_properties
+
+
+__all__ = ['LatentMarble']
 
 data_path = os.path.join(
     os.path.dirname(
@@ -106,6 +110,7 @@ def get_state_dict_from_array(state_array):
     return out_dict
 
 
+@document_properties
 class LatentMarble(TendencyComponent):
     """
     MARBLE component which works in latent space (inputs and outputs

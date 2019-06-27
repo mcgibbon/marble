@@ -7,8 +7,8 @@ Welcome to MARBLE's documentation!
 
    readme
    installation
+   quickstart
    usage
-   modules
    contributing
    authors
    history

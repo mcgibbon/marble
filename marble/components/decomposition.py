@@ -1,9 +1,15 @@
 import numpy as np
 from sympl import DiagnosticComponent
 from marble.components.marble import pc_ds, name_feature_counts
+from marble.docstrings import document_properties
 
 
+@document_properties
 class InputHeightToPrincipalComponents(DiagnosticComponent):
+    """
+    Converts MARBLE's vertically-resolved inputs from height coordinates to
+    principal components.
+    """
 
     input_properties = {
         'liquid_water_static_energy': {
@@ -49,6 +55,24 @@ class InputHeightToPrincipalComponents(DiagnosticComponent):
 
 
 def convert_height_to_principal_components(array, basis_name, subtract_mean=True):
+    """
+    Converts a numpy array from height coordinates on a 20-point equidistant grid
+    from 0 to 3km (inclusive) into principal components required by MARBLE.
+
+    Args:
+        array: numpy array whose final dimension is of size 20
+        basis_name: short alias name of the quantity whose principal components
+            to use. For example, 'rt', 'sl', 'cld', 'rcld', 'rrain', or 'w'.
+        subtract_mean: whether to subtract the mean vertical profile of the
+            basis quantity from the numpy array before converting into principal
+            components. Generally this is True if you are converting the basis
+            quantity itself, and False if you are converting a difference to
+            apply to the basis quantity (such as a tendency).
+
+    Returns:
+        return_array: numpy array whose final dimension length is equal to the
+            number of principal components used for hte basis quantity.
+    """
     if subtract_mean:
         array = array - pc_ds[f'{basis_name}_mean'].values
     return np.dot(
@@ -58,6 +82,23 @@ def convert_height_to_principal_components(array, basis_name, subtract_mean=True
 
 
 def convert_principal_components_to_height(array, basis_name, add_mean=True):
+    """
+    Converts a numpy array from principal components as used by MARBLE to
+    height coordinates on a 20-point equidistant grid from 0 to 3km (inclusive).
+
+    Args:
+        array: numpy array whose final dimension is principal component number
+        basis_name: short alias name of the quantity whose principal components
+            are used. For example, 'rt', 'sl', 'cld', 'rcld', 'rrain', or 'w'.
+        add_mean: whether to add in the mean vertical profile of the
+            basis quantity from the numpy array after converting to height
+            coordinates. Generally this is True if you are converting the basis
+            quantity itself, and False if you are converting a difference
+            applied to the basis quantity (such as a tendency).
+
+    Returns:
+        return_array: numpy array whose final dimension length is 20.
+    """
     result = np.dot(
         array,
         pc_ds[f'{basis_name}_principal_components'].values[:name_feature_counts[basis_name], :]
@@ -67,7 +108,12 @@ def convert_principal_components_to_height(array, basis_name, add_mean=True):
     return result
 
 
+@document_properties
 class InputPrincipalComponentsToHeight(DiagnosticComponent):
+    """
+    Converts MARBLE's vertically-resolved inputs from principal components to
+    height coordinates.
+    """
 
     input_properties = {
         'liquid_water_static_energy_components': {
@@ -114,7 +160,12 @@ class InputPrincipalComponentsToHeight(DiagnosticComponent):
         return diagnostic_dict
 
 
+@document_properties
 class DiagnosticPrincipalComponentsToHeight(DiagnosticComponent):
+    """
+    Converts MARBLE's vertically-resolved diagnostic outputs from principal
+    components to height coordinates.
+    """
 
     input_properties = {
         'cloud_water_mixing_ratio_components': {

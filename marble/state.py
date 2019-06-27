@@ -1,3 +1,4 @@
+__all__ = ['register_alias', 'register_alias_dict', 'AliasDict']
 
 _alias_to_long_name = {}
 
