@@ -9,7 +9,6 @@ It requires Python 3.
    :maxdepth: 2
    :caption: Contents:
 
-   readme
    installation
    quickstart
    usage
